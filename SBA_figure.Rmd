@@ -43,7 +43,7 @@ sba$BeganCourse1000<-sba[,3]/1000
 
 ## Provided some information
 names(sba)[names(sba)=="X..Completed.Some.Information"]<-"CompletedSomeInfo"
-sba$SomeInfo<-with(sba,(Completed.Some.Information+Completed.All.Information)/(sba$Completed.Some.Information+sba$Completed.No.Information+sba$Completed.All.Information))
+sba$SomeInfo<-with(sba,(Completed.Some.Information+Completed.All.Information)/(sba$Completed.Some.Information+sba$Completed.No.Information+sba$Completed.All.Information))*100
 
 as.character(sba$Variation[1])
 ## sba$Form<-ifelse(sba$Variation=="Old Form","Pre Change","Post Change")
@@ -52,7 +52,7 @@ sba$Form<-ifelse(sba$Variation!="Old Form","New Form",as.character(sba$Variation
 
 Collapse the information about the new forms.
 
-```{r}
+```{r,cache=F}
 
 newdat <- sba[,c("Date","Dates","ConversionRate","SomeInfo","Form")]
 
@@ -67,22 +67,22 @@ newdat$Dates<-factor(newdat$Dates,levels=newdat$Dates)
 ```
 
 
-```{r figConversion}
+```{r figConversion,cache=F}
 p_sba_conv<-ggplot(newdat,aes(x=Date,y=ConversionRate,col=Form))+geom_line()+geom_point()+
     scale_x_continuous(breaks=1:16,labels=newdat$Dates)+ theme(axis.text.x = element_text(angle = 90, hjust = 1))+labs(y="Conversion Rate (%)",x="",title="Conversion Rate")
 p_sba_conv
 ```
 
 
-```{r figSomeInfo}
-p_sba_conv<-ggplot(newdat,aes(x=Date,y=SomeInfo,col=Form))+geom_line()+geom_point()+
+```{r figSomeInfo,cache=F}
+p_sba_info<-ggplot(newdat,aes(x=Date,y=SomeInfo,col=Form))+geom_line()+geom_point()+
     scale_x_continuous(breaks=1:16,labels=newdat$Dates)+ theme(axis.text.x = element_text(angle = 90, hjust = 1))+labs(y="Provided Some Information (%)",x="",title="Information Provision")
-p_sba_conv
+p_sba_info
 ```
 
 
 
-```{r figPart}
+```{r figPart,cache=F}
 p_sba_part<-ggplot(sba,aes(x=Dates,y=BeganCourse1000,fill=Form))+geom_bar(stat="identity")+
    theme(axis.text.x = element_text(angle = 90, hjust = 1))+labs(y="# (in Thousands)",x="Date",title="# Beginning Course")
 p_sba_part
@@ -100,7 +100,93 @@ p_sba_part_c<-ggplot(sba,aes(x=Dates,y=BeganCourse1000,fill=Form))+geom_bar(stat
 ```
 
 
-```{r figComb}
-grid.arrange(p_sba_conv_c,p_sba_part_c,ncol=1)
+```{r figComb,fig.width=12}
+grid.arrange(p_sba_conv,p_sba_info,ncol=2)
 ```
 
+
+# Test of Proprotions: Conversion Rate
+
+Do a test of proportions (prop.test) converting during mar--may 2016 versus average of jan and feb 2016. Also test mar--may 2016 versus mar--may 2015.
+```{r conversionrates}
+# Number converted
+sba$Converted<-sba[,3]-sba[,4]
+# Create table for prop test
+contab1<-matrix(NA,2,2)
+rownames(contab1)<-c("Mar-May 2016","Jan-Feb 2016")
+colnames(contab1)<-c("Converted","Not Converted")
+# Add success and failures
+# Post change
+contab1[1,]<-colSums(sba[sba$Dates%in%c("Mar 25 2016", "Apr 21 2016", "May 24 2016"),c(16,4)])
+# January to Febuary
+contab1[2,]<-colSums(sba[sba$Dates%in%c("Dec 25 2015", "Jan 25 2016","Feb 25 2016"),c(16,4)])
+conprop1<-prop.test(contab1)
+conprop1
+
+
+# 
+contab2<-matrix(NA,2,2)
+rownames(contab2)<-c("Mar-May 2016","Mar-May 2015")
+colnames(contab2)<-c("Converted","Not Converted")
+# Add success and failures
+
+contab2[1,]<-colSums(sba[sba$Dates%in%c("Mar 25 2016", "Apr 21 2016", "May 24 2016"),c(16,4)])
+contab2[2,]<-colSums(sba[sba$Dates%in%c("Mar 25 2015", "Apr 21 2015", "May 24 2015"),c(16,4)])
+
+conprop2<-prop.test(contab2)
+conprop2
+
+
+
+
+```
+
+Compared to the proportion converting between January and February in 2016 (`r round(conprop1$estimate[2]*100,2)` percent), the new forms increased conversion by  `r round(diff(conprop1$estimate[c(2,1)])*100,2)` percent (p<0.001, 95% CI [`r round(conprop1$conf.int[1]*100,2)`, `r round(conprop1$conf.int[2]*100,2)`
+])
+
+Compared to the proportion converting between then end of March and May in 2016 (`r round(conprop2$estimate[2]*100,2)` percent), the new forms increased conversion by  `r round(diff(conprop2$estimate[c(2,1)])*100,2)` percent (p<0.001, 95% CI [`r round(conprop2$conf.int[1]*100,2)`, `r round(conprop2$conf.int[2]*100,2)`
+])
+
+# Test of Proportions: Some Information
+
+
+```{r informationrates}
+# Number converted
+sba$SomeInfo_cnt<-sba$SomeInfo<-with(sba,Completed.Some.Information+Completed.All.Information)
+sba$NoInfo_cnt<-sba$Completed.No.Information
+
+# Create table for prop test
+infotab1<-matrix(NA,2,2)
+rownames(infotab1)<-c("Mar-May 2016","Dec 2015-Feb 2016")
+colnames(infotab1)<-c("Some Info","No Info")
+# Add success and failures
+# Post change
+infotab1[1,]<-colSums(sba[sba$Dates%in%c("Mar 25 2016", "Apr 21 2016", "May 24 2016"),c("SomeInfo_cnt","NoInfo_cnt")])
+# January to Febuary
+infotab1[2,]<-colSums(sba[sba$Dates%in%c("Dec 25 2015", "Jan 25 2016","Feb 25 2016"),c("SomeInfo_cnt","NoInfo_cnt")])
+infoprop1<-prop.test(infotab1)
+infoprop1
+
+
+# 
+infotab2<-matrix(NA,2,2)
+rownames(infotab2)<-c("Mar-May 2016","Mar-May 2015")
+colnames(infotab2)<-c("Converted","Not Converted")
+# Add success and failures
+
+infotab2[1,]<-colSums(sba[sba$Dates%in%c("Mar 25 2016", "Apr 21 2016", "May 24 2016"),c("SomeInfo_cnt","NoInfo_cnt")])
+infotab2[2,]<-colSums(sba[sba$Dates%in%c("Mar 25 2015", "Apr 21 2015", "May 24 2015"),c("SomeInfo_cnt","NoInfo_cnt")],na.rm=T)
+
+infoprop2<-prop.test(infotab2)
+infoprop2
+
+
+
+
+```
+
+Compared to the proportion providing some info between January and February in 2016 (`r round(infoprop1$estimate[2]*100,2)` percent), the new forms increased information provision by  `r round(diff(infoprop1$estimate[c(2,1)])*100,2)` percent (p<0.001, 95% CI [`r round(infoprop1$conf.int[1]*100,2)`, `r round(infoprop1$conf.int[2]*100,2)`
+])
+
+Compared to the proportion converting between then end of March and May in 2016 (`r round(infoprop2$estimate[2]*100,2)` percent), the new forms increased information provision by  `r round(diff(infoprop2$estimate[c(2,1)])*100,2)` percent (p<0.001, 95% CI [`r round(infoprop2$conf.int[1]*100,2)`, `r round(infoprop2$conf.int[2]*100,2)`
+])
