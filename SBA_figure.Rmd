@@ -27,7 +27,7 @@ sba<-read.csv("sba.csv",as.is=TRUE,strip.white=TRUE)
 print(sba$Date.Range)
 sba$Date.Range[sba$Date.Range=="May 24 2016 - July 24 2015"]<-"May 24 2015 - July 24 2015"
 sba$Date<-1:nrow(sba)
-gsub("[[:blank:]]*- [[:alnum:]]*[[:blank:]]*[[:alnum:]]*[[:blank:]]*[[:alnum:]]*[[:alnum:]]*[[:alnum:]]","",sba$Date.Range)
+
 sba$Dates<-gsub("[[:blank:]]*- [[:alnum:]]*[[:blank:]]*[[:alnum:]]*[[:blank:]]*[[:alnum:]]*[[:alnum:]]*[[:alnum:]]","",sba$Date.Range)
 sba$Dates<-gsub("Sept","Sep",sba$Dates)
 #sba$Dates<-factor(sba$Dates,levels=sba$Dates)
@@ -47,7 +47,7 @@ sba$SomeInfo<-with(sba,(Completed.Some.Information+Completed.All.Information)/(s
 
 as.character(sba$Variation[1])
 ## sba$Form<-ifelse(sba$Variation=="Old Form","Pre Change","Post Change")
-sba$Form<-ifelse(sba$Variation!="Old Form","New Form",sba$Variation)
+sba$Form<-ifelse(sba$Variation!="Old Form","New Form",as.character(sba$Variation))
 ```
 
 Collapse the information about the new forms.
@@ -63,19 +63,19 @@ newdat$ConversionRate[newdat$Dates=="Mar 24 to May 24 2016"]<-mean(newdat$Conver
 newdat$SomeInfo[newdat$Dates=="Mar 24 to May 24 2016"]<-mean(newdat$SomeInfo[newdat$Dates=="Mar 24 to May 24 2016"])
 
 newdat<-newdat[1:16,]
-
+newdat$Dates<-factor(newdat$Dates,levels=newdat$Dates)
 ```
 
 
 ```{r figConversion}
-p_sba_conv<-ggplot(newdat,aes(x=Date,y=ConversionRate,col=Form))+geom_line()+
+p_sba_conv<-ggplot(newdat,aes(x=Date,y=ConversionRate,col=Form))+geom_line()+geom_point()+
     scale_x_continuous(breaks=1:16,labels=newdat$Dates)+ theme(axis.text.x = element_text(angle = 90, hjust = 1))+labs(y="Conversion Rate (%)",x="",title="Conversion Rate")
 p_sba_conv
 ```
 
 
 ```{r figSomeInfo}
-p_sba_conv<-ggplot(newdat,aes(x=Date,y=SomeInfo,col=Form))+geom_line()+
+p_sba_conv<-ggplot(newdat,aes(x=Date,y=SomeInfo,col=Form))+geom_line()+geom_point()+
     scale_x_continuous(breaks=1:16,labels=newdat$Dates)+ theme(axis.text.x = element_text(angle = 90, hjust = 1))+labs(y="Provided Some Information (%)",x="",title="Information Provision")
 p_sba_conv
 ```
