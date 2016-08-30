@@ -19,37 +19,71 @@ Document to create time series trend in SBA data
 
 ```{r data}
 # Load sba.cvs (saved locally) containing monthly estimates
-sba<-read.csv("sba.csv")
+sba<-read.csv("sba.csv",as.is=TRUE,strip.white=TRUE)
 ```
 
 ```{r recodes}
 # Rename date varialbe
-sba$Date.Range
-sba$Date<-1:dim(sba)[1]
+print(sba$Date.Range)
+sba$Date.Range[sba$Date.Range=="May 24 2016 - July 24 2015"]<-"May 24 2015 - July 24 2015"
+sba$Date<-1:nrow(sba)
 gsub("[[:blank:]]*- [[:alnum:]]*[[:blank:]]*[[:alnum:]]*[[:blank:]]*[[:alnum:]]*[[:alnum:]]*[[:alnum:]]","",sba$Date.Range)
 sba$Dates<-gsub("[[:blank:]]*- [[:alnum:]]*[[:blank:]]*[[:alnum:]]*[[:blank:]]*[[:alnum:]]*[[:alnum:]]*[[:alnum:]]","",sba$Date.Range)
-sba$Dates<-factor(sba$Dates,levels=sba$Dates)
-sba[,5]<-(1-sba[,4]/sba[,3])*100
-names(sba)[5]<-"ConversionRate"
-class(sba[,"ConversionRate"])
-sba[,3]<-sba[,3]/1000
-as.character(sba$Variation[1])
-sba$Form<-ifelse(sba$Variation=="Old Form","Pre Change","Post Change")
+sba$Dates<-gsub("Sept","Sep",sba$Dates)
+#sba$Dates<-factor(sba$Dates,levels=sba$Dates)
+library(lubridate)
+sba$DateStart<-mdy(as.character(sba$Dates))
 
+tmp<-(1-sba[,4]/sba[,3])*100
+cbind(tmp,sba$Converstion.Rate.to.Course)
+names(sba)[5]<-"ConversionRate"
+sba$ConversionRate<-(1-sba[,4]/sba[,3])*100
+class(sba[,"ConversionRate"])
+sba$BeganCourse1000<-sba[,3]/1000
+
+## Provided some information
+names(sba)[names(sba)=="X..Completed.Some.Information"]<-"CompletedSomeInfo"
+sba$SomeInfo<-with(sba,(Completed.Some.Information+Completed.All.Information)/(sba$Completed.Some.Information+sba$Completed.No.Information+sba$Completed.All.Information))
+
+as.character(sba$Variation[1])
+## sba$Form<-ifelse(sba$Variation=="Old Form","Pre Change","Post Change")
+sba$Form<-ifelse(sba$Variation!="Old Form","New Form",sba$Variation)
+```
+
+Collapse the information about the new forms.
+
+```{r}
+
+newdat <- sba[,c("Date","Dates","ConversionRate","SomeInfo","Form")]
+
+newdat[newdat$Dates %in% c("Mar 25 2016","Apr 21 2016","May 24 2016"),"Dates"]<-"Mar 24 to May 24 2016"
+
+newdat$ConversionRate[newdat$Dates=="Mar 24 to May 24 2016"]<-mean(newdat$ConversionRate[newdat$Dates=="Mar 24 to May 24 2016"])
+
+newdat$SomeInfo[newdat$Dates=="Mar 24 to May 24 2016"]<-mean(newdat$SomeInfo[newdat$Dates=="Mar 24 to May 24 2016"])
+
+newdat<-newdat[1:16,]
 
 ```
 
 
-
 ```{r figConversion}
-p_sba_conv<-ggplot(sba,aes(x=Date,y=ConversionRate,col=Form))+geom_line()+
-    scale_x_continuous(breaks=1:18,labels=sba$Dates)+ theme(axis.text.x = element_text(angle = 90, hjust = 1))+labs(y="Conversion Rate (%)",x="",title="Conversion Rate")
+p_sba_conv<-ggplot(newdat,aes(x=Date,y=ConversionRate,col=Form))+geom_line()+
+    scale_x_continuous(breaks=1:16,labels=newdat$Dates)+ theme(axis.text.x = element_text(angle = 90, hjust = 1))+labs(y="Conversion Rate (%)",x="",title="Conversion Rate")
 p_sba_conv
 ```
 
 
+```{r figSomeInfo}
+p_sba_conv<-ggplot(newdat,aes(x=Date,y=SomeInfo,col=Form))+geom_line()+
+    scale_x_continuous(breaks=1:16,labels=newdat$Dates)+ theme(axis.text.x = element_text(angle = 90, hjust = 1))+labs(y="Provided Some Information (%)",x="",title="Information Provision")
+p_sba_conv
+```
+
+
+
 ```{r figPart}
-p_sba_part<-ggplot(sba,aes(x=Dates,y=Began.Course,fill=Form))+geom_bar(stat="identity")+
+p_sba_part<-ggplot(sba,aes(x=Dates,y=BeganCourse1000,fill=Form))+geom_bar(stat="identity")+
    theme(axis.text.x = element_text(angle = 90, hjust = 1))+labs(y="# (in Thousands)",x="Date",title="# Beginning Course")
 p_sba_part
 ```
@@ -59,7 +93,7 @@ p_sba_part
 p_sba_conv_c<-ggplot(sba,aes(x=Date,y=ConversionRate,col=Form))+geom_line()+
     scale_x_continuous(breaks=1:18,labels=sba$Dates)+ theme(axis.ticks = element_blank(), axis.text.x = element_blank())+labs(y="Conversion Rate (%)",x="",title="Conversion Rate")
 
-p_sba_part_c<-ggplot(sba,aes(x=Dates,y=Began.Course,fill=Form))+geom_bar(stat="identity")+
+p_sba_part_c<-ggplot(sba,aes(x=Dates,y=BeganCourse1000,fill=Form))+geom_bar(stat="identity")+
    theme(axis.text.x = element_text(angle = 90, hjust = 1))+labs(y="# (in Thousands)",x="Date",title="# Beginning Course")
 
 
