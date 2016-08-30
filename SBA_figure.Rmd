@@ -1,6 +1,6 @@
 ---
 title: "SBA Figure"
-author: "Paul Testa"
+author: "Paul Testa and Jake Bowers"
 date: '`r format(Sys.Date(), "%B %d, %Y")`'
 output: html_document
 ---
