@@ -1,2 +1,2 @@
 # sba
-A repository for the small-business administration information collection and e-learning analysis
+ A repository for the Small Business Administration (SBA) Learning Center enrollment forms analysis
